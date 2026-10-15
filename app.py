@@ -15,13 +15,12 @@ st.set_page_config(
 )
 
 # --- CONFIGURAÇÃO DA IA (NVIDIA NEMOTRON) ---
-# O sistema puxa a chave que você configurou em TOML no Secrets
 if "NVIDIA_API_KEY" in st.secrets:
-    api_key = st.secrets["NVIDIA_API_KEY"]
+    api_key = st.secrets["NVIDIA_API_KEY"].strip()
 else:
     api_key = None
 
-# Inicializa o cliente apontando para o servidor da NVIDIA
+# Inicializa o cliente apontando corretamente para o servidor de APIs da NVIDIA
 client = None
 if api_key:
     client = OpenAI(
@@ -108,14 +107,14 @@ with aba_camera:
         if st.button("🤖 Ler Rótulo com Nemotron-3.5", type="primary"):
             with st.spinner("A Super IA da NVIDIA está processando a imagem..."):
                 try:
-                    # Lê os bytes e converte para string em Base64 para enviar na URL do payload
+                    # Prepara a imagem convertendo para Base64
                     bytes_foto = arquivo_foto.getvalue()
                     base64_image = base64.b64encode(bytes_foto).decode('utf-8')
                     data_url = f"data:image/jpeg;base64,{base64_image}"
                     
-                    # Prompt estruturado para forçar retorno estrito em JSON
+                    # Prompt estruturado para retornar JSON limpo
                     prompt = """
-                    Analise a imagem deste rótulo. Extraia os dados solicitados e responda UNICAMENTE com um objeto JSON válido, sem formatações markdown extras (sem as aspas de bloco ```json).
+                    Analise a imagem deste rótulo. Extraia os dados solicitados e responda UNICAMENTE com um objeto JSON válido. Não inclua blocos de código markdown ou texto explicativo antes ou depois.
                     Se não encontrar um nutriente, retorne 0.0 para ele.
 
                     {
@@ -126,7 +125,7 @@ with aba_camera:
                     }
                     """
                     
-                    # Estrutura de chamada oficial baseada no modelo Nemotron Vision da NVIDIA
+                    # Chamada oficial da API de Visão da NVIDIA
                     completion = client.chat.completions.create(
                         model="nvidia/nemotron-3.5-super-vl-120b-a12b",
                         messages=[
@@ -142,3 +141,4 @@ with aba_camera:
                         max_tokens=1024
                     )
                     
+                    # Captura o texto retornado e remove marcações markdown se a IA colocar por vício
